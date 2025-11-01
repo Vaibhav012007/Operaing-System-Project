@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Disk Scheduling Simulator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .input-section {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .input-hint {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        button {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-simulate {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-simulate:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-reset {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-reset:hover {
+            background: #5a6268;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .visualization {
+            margin-top: 30px;
+            display: none;
+        }
+
+        .visualization.active {
+            display: block;
+        }
+
+        .algorithm-info {
+            background: #e7f3ff;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border-left: 5px solid #667eea;
+        }
+
+        .algorithm-info h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .canvas-container {
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        canvas {
+            display: block;
+            margin: 0 auto;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2.5em;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        .sequence {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        .sequence h4 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .sequence-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .sequence-item {
+            background: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: 2px solid #667eea;
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .sequence-item.current {
+            background: #667eea;
+            color: white;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 5px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🖴 Disk Scheduling Simulator</h1>
+            <p class="subtitle">Visualize and Compare Disk I/O Scheduling Algorithms</p>
+        </header>
+
+        <div class="content">
+            <div class="input-section">
+                <div class="input-group">
+                    <label>Request Queue (comma-separated cylinder numbers)</label>
+                    <input type="text" id="requestQueue" placeholder="e.g., 98, 183, 37, 122, 14, 124, 65, 67">
+                    <div class="input-hint">Enter cylinder numbers separated by commas (any positive values)</div>
+                </div>
+
+                <div class="input-group">
+                    <label>Initial Head Position</label>
+                    <input type="number" id="initialHead" value="53" min="0">
+                    <div class="input-hint">Starting position of disk head (any non-negative value)</div>
+                </div>
+
+                <div class="input-group">
+                    <label>Initial Direction (for SCAN, C-SCAN, LOOK, C-LOOK)</label>
+                    <select id="direction">
+                        <option value="right">Moving Right (Towards Higher Cylinders)</option>
+                        <option value="left">Moving Left (Towards Lower Cylinders)</option>
+                    </select>
+                </div>
+
+                <div class="input-group">
+                    <label>Disk Scheduling Algorithm</label>
+                    <select id="algorithm">
+                        <option value="fcfs">FCFS - First Come First Serve</option>
+                        <option value="sstf">SSTF - Shortest Seek Time First</option>
+                        <option value="scan">SCAN - Elevator Algorithm</option>
+                        <option value="cscan">C-SCAN - Circular SCAN</option>
+                        <option value="look">LOOK</option>
+                        <option value="clook">C-LOOK - Circular LOOK</option>
+                    </select>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn-simulate" onclick="simulate()">Simulate</button>
+                    <button class="btn-reset" onclick="reset()">Reset</button>
+                </div>
+            </div>
+
+            <div id="error" class="error" style="display:none;"></div>
+
+            <div id="visualization" class="visualization">
+                <div class="algorithm-info" id="algoInfo"></div>
+                
+                <div class="canvas-container">
+                    <canvas id="diskCanvas" width="1000" height="400"></canvas>
+                </div>
+
+                <div class="stats">
+                    <div class="stat-card">
+                        <div class="stat-label">Total Seek Time</div>
+                        <div class="stat-value" id="totalSeek">0</div>
+                        <div class="stat-label">cylinders</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Average Seek Time</div>
+                        <div class="stat-value" id="avgSeek">0</div>
+                        <div class="stat-label">cylinders</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Total Requests</div>
+                        <div class="stat-value" id="totalRequests">0</div>
+                        <div class="stat-label">requests</div>
+                    </div>
+                </div>
+
+                <div class="sequence">
+                    <h4>Seek Sequence</h4>
+                    <div class="sequence-list" id="sequenceList"></div>
+                </div>
+
+                <div class="algorithm-info" style="background: #f0f9ff; border-left-color: #0284c7; margin-top: 20px;">
+                    <h3 style="color: #0284c7;">📊 Performance Analysis</h3>
+                    <p style="margin-bottom: 10px;">The simulator efficiently demonstrates disk head movement patterns and total seek time for each algorithm. Users can clearly see performance differences:</p>
+                    <ul style="margin-left: 20px; line-height: 1.8;">
+                        <li><strong>SSTF</strong> usually performs better than FCFS by selecting the nearest request, reducing overall seek time</li>
+                        <li><strong>LOOK/C-LOOK</strong> avoid unnecessary movement to disk ends, improving efficiency over SCAN/C-SCAN</li>
+                        <li><strong>SCAN/C-SCAN</strong> prevent starvation by ensuring all requests are eventually serviced</li>
+                    </ul>
+                    <p style="margin-top: 10px; font-style: italic;">The project successfully meets educational objectives by connecting disk scheduling theory to visualization and practical execution.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const algorithmDescriptions = {
+            fcfs: {
+                name: "FCFS (First Come First Serve)",
+                description: "Processes disk requests in the order they arrive. Simple but may not be optimal for performance. Can lead to long seek times if requests are far apart."
+            },
+            sstf: {
+                name: "SSTF (Shortest Seek Time First)",
+                description: "Selects the request closest to the current head position. Reduces average seek time but can cause starvation of requests far from the current position."
+            },
+            scan: {
+                name: "SCAN (Elevator Algorithm)",
+                description: "Moves the head from one end to the other, servicing requests along the way, then reverses direction. Provides uniform wait time and prevents starvation."
+            },
+            cscan: {
+                name: "C-SCAN (Circular SCAN)",
+                description: "Like SCAN but only services requests in one direction. When reaching the end, jumps back to the beginning. Provides more uniform wait time than SCAN."
+            },
+            look: {
+                name: "LOOK",
+                description: "Similar to SCAN but only goes as far as the last request in each direction, not to the physical end of the disk. More efficient than SCAN."
+            },
+            clook: {
+                name: "C-LOOK (Circular LOOK)",
+                description: "Combines C-SCAN and LOOK. Services requests in one direction up to the last request, then jumps to the lowest request. More efficient than C-SCAN."
+            }
+        };
+
+        let canvas, ctx;
+        let animationId;
+
+        function init() {
+            canvas = document.getElementById('diskCanvas');
+            ctx = canvas.getContext('2d');
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            setTimeout(() => {
+                errorDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        function validateInputs() {
+            const queueInput = document.getElementById('requestQueue').value.trim();
+            const initialHead = parseInt(document.getElementById('initialHead').value);
+
+            if (!queueInput) {
+                showError('Please enter a request queue');
+                return false;
+            }
+
+            const queue = queueInput.split(',').map(x => parseInt(x.trim())).filter(x => !isNaN(x));
+            
+            if (queue.length === 0) {
+                showError('Invalid request queue format');
+                return false;
+            }
+
+            if (queue.some(x => x < 0)) {
+                showError('All cylinder numbers must be non-negative (0 or greater)');
+                return false;
+            }
+
+            if (isNaN(initialHead) || initialHead < 0) {
+                showError('Initial head position must be non-negative (0 or greater)');
+                return false;
+            }
+
+            return true;
+        }
+
+        function fcfs(queue, head) {
+            const sequence = [head];
+            let totalSeek = 0;
+            let current = head;
+
+            for (let req of queue) {
+                totalSeek += Math.abs(req - current);
+                current = req;
+                sequence.push(req);
+            }
+
+            return { sequence, totalSeek };
+        }
+
+        function sstf(queue, head) {
+            const sequence = [head];
+            let totalSeek = 0;
+            let current = head;
+            let remaining = [...queue];
+
+            while (remaining.length > 0) {
+                let minDist = Infinity;
+                let minIdx = 0;
+
+                for (let i = 0; i < remaining.length; i++) {
+                    const dist = Math.abs(remaining[i] - current);
+                    if (dist < minDist) {
+                        minDist = dist;
+                        minIdx = i;
+                    }
+                }
+
+                totalSeek += minDist;
+                current = remaining[minIdx];
+                sequence.push(current);
+                remaining.splice(minIdx, 1);
+            }
+
+            return { sequence, totalSeek };
+        }
+
+        function scan(queue, head, direction) {
+            const sequence = [head];
+            let totalSeek = 0;
+            let current = head;
+            
+            const allPositions = [...queue, head];
+            const maxCylinder = Math.max(...allPositions);
+            
+            const left = queue.filter(x => x < head).sort((a, b) => b - a);
+            const right = queue.filter(x => x >= head).sort((a, b) => a - b);
+
+            if (direction === 'right') {
+                for (let req of right) {
+                    totalSeek += Math.abs(req - current);
+                    current = req;
+                    sequence.push(req);
+                }
+                if (right.length > 0 && current < maxCylinder) {
+                    totalSeek += maxCylinder - current;
+                    current = maxCylinder;
+                    sequence.push(current);
+                }
+                for (let req of left) {
+                    totalSeek += Math.abs(req - current);
+                    current = req;
+                    sequence.push(req);
+                }
+            } else {
+                for (let req of left) {
+                    totalSeek += Math.abs(req - current);
+                    current = req;
+                    sequence.push(req);
+                }
+                if (left.length > 0 && current > 0) {
+                    totalSeek += current;
+                    current = 0;
+                    sequence.push(current);
+                }
+                for (let req of right) {
+                    totalSeek += Math.abs(req - current);
+                    current = req;
+                    sequence.push(req);
+                }
+            }
+
+            return { sequence, totalSeek };
+        }
+
+        function cscan(queue, head, direction) {
+            const sequence = [head];
+            let totalSeek = 0;
+            let current = head;
+            
+            const allPositions = [...queue, head];
+            const maxCylinder = Math.max(...allPositions);
+            
+            const left = queue.filter(x => x < head).sort((a, b) => a - b);
+            const right = queue.filter(x => x >= head).sort((a, b) => a - b);
+
+            if (direction === 'right') {
+                for (let req of right) {
+                    totalSeek += Math.abs(req - current);
+                    current = req;
+                    sequence.push(req);
+                }
+                if (right.length > 0 && current < maxCylinder) {
+                    totalSeek += maxCylinder - current;
+                    current = maxCylinder;
+                    sequence.push(current);
+                    totalSeek += maxCylinder;
+                    current = 0;
+                    sequence.push(current);
+                }
+                for (let req of left) {
+                    totalSeek += Math.abs(req - current);
+                    current = req;
+                    sequence.push(req);
+                }
+            } else {
+                for (let req of left.reverse()) {
+                    totalSeek += Math.abs(req - current);
+                    current = req;
+                    sequence.push(req);
+                }
+                if (left.length > 0 && current > 0) {
+                    totalSeek += current;
+                    current = 0;
+                    sequence.push(current);
+                    totalSeek += maxCylinder;
+                    current = maxCylinder;
+                    sequence.push(current);
+                }
+                for (let req of right.reverse()) {
+                    totalSeek += Math.abs(req - current);
+                    current = req;
+                    sequence.push(req);
+                }
+            }
+
+            return { sequence, totalSeek };
+        }
+
+        function look(queue, head, direction) {
+            const sequence = [head];
+            let totalSeek = 0;
+            let current = head;
+            
+            const left = queue.filter(x => x < head).sort((a, b) => b - a);
+            const right = queue.filter(x => x >= head).sort((a, b) => a - b);
+
+            if (direction === 'right') {
+                for (let req of right) {
+                    totalSeek += Math.abs(req - current);
+                    current = req;
+                    sequence.push(req);
+                }
+                for (let req of left) {
+                    totalSeek += Math.abs(req - current);
+                    current = req;
+                    sequence.push(req);
+                }
+            } else {
+                for (let req of left) {
+                    totalSeek += Math.abs(req - current);
+                    current = req;
+                    sequence.push(req);
+                }
+                for (let req of right) {
+                    totalSeek += Math.abs(req - current);
+                    current = req;
+                    sequence.push(req);
+                }
+            }
+
+            return { sequence, totalSeek };
+        }
+
+        function clook(queue, head, direction) {
+            const sequence = [head];
+            let totalSeek = 0;
+            let current = head;
+            
+            const left = queue.filter(x => x < head).sort((a, b) => a - b);
+            const right = queue.filter(x => x >= head).sort((a, b) => a - b);
+
+            if (direction === 'right') {
+                for (let req of right) {
+                    totalSeek += Math.abs(req - current);
+                    current = req;
+                    sequence.push(req);
+                }
+                for (let req of left) {
+                    totalSeek += Math.abs(req - current);
+                    current = req;
+                    sequence.push(req);
+                }
+            } else {
+                for (let req of left.reverse()) {
+                    totalSeek += Math.abs(req - current);
+                    current = req;
+                    sequence.push(req);
+                }
+                for (let req of right.reverse()) {
+                    totalSeek += Math.abs(req - current);
+                    current = req;
+                    sequence.push(req);
+                }
+            }
+
+            return { sequence, totalSeek };
+        }
+
+        function drawVisualization(sequence, totalCylinders, currentIndex = sequence.length - 1) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            const margin = 50;
+            const width = canvas.width - 2 * margin;
+            const height = canvas.height - 2 * margin;
+            const scale = width / totalCylinders;
+
+            // Draw axis
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(margin, margin + height);
+            ctx.lineTo(margin + width, margin + height);
+            ctx.stroke();
+
+            // Draw cylinder markers
+            ctx.fillStyle = '#666';
+            ctx.font = '12px Arial';
+            ctx.textAlign = 'center';
+            for (let i = 0; i <= totalCylinders; i += Math.ceil(totalCylinders / 10)) {
+                const x = margin + i * scale;
+                ctx.beginPath();
+                ctx.moveTo(x, margin + height);
+                ctx.lineTo(x, margin + height + 5);
+                ctx.stroke();
+                ctx.fillText(i, x, margin + height + 20);
+            }
+
+            // Draw path
+            for (let i = 0; i < currentIndex; i++) {
+                const x1 = margin + sequence[i] * scale;
+                const y1 = margin + height - (i * height / (sequence.length - 1));
+                const x2 = margin + sequence[i + 1] * scale;
+                const y2 = margin + height - ((i + 1) * height / (sequence.length - 1));
+
+                // Draw line
+                ctx.strokeStyle = '#667eea';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(x2, y2);
+                ctx.stroke();
+
+                // Draw point
+                ctx.fillStyle = i === 0 ? '#28a745' : '#667eea';
+                ctx.beginPath();
+                ctx.arc(x1, y1, 6, 0, 2 * Math.PI);
+                ctx.fill();
+
+                // Draw label
+                ctx.fillStyle = '#333';
+                ctx.font = 'bold 11px Arial';
+                ctx.fillText(sequence[i], x1, y1 - 12);
+            }
+
+            // Draw current position
+            if (currentIndex < sequence.length) {
+                const x = margin + sequence[currentIndex] * scale;
+                const y = margin + height - (currentIndex * height / (sequence.length - 1));
+                
+                ctx.fillStyle = '#dc3545';
+                ctx.beginPath();
+                ctx.arc(x, y, 8, 0, 2 * Math.PI);
+                ctx.fill();
+
+                ctx.fillStyle = '#333';
+                ctx.font = 'bold 12px Arial';
+                ctx.fillText(sequence[currentIndex], x, y - 15);
+            }
+
+            // Draw labels
+            ctx.fillStyle = '#333';
+            ctx.font = '14px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('Cylinder Number', margin + width / 2, canvas.height - 5);
+            
+            ctx.save();
+            ctx.translate(15, margin + height / 2);
+            ctx.rotate(-Math.PI / 2);
+            ctx.fillText('Request Order', 0, 0);
+            ctx.restore();
+        }
+
+        function animate(sequence, totalCylinders) {
+            let index = 0;
+            const sequenceList = document.getElementById('sequenceList');
+
+            function step() {
+                if (index < sequence.length) {
+                    drawVisualization(sequence, totalCylinders, index);
+                    
+                    // Update sequence display
+                    const items = sequenceList.children;
+                    for (let i = 0; i < items.length; i++) {
+                        items[i].classList.remove('current');
+                    }
+                    if (items[index]) {
+                        items[index].classList.add('current');
+                    }
+
+                    index++;
+                    animationId = setTimeout(step, 800);
+                }
+            }
+
+            step();
+        }
+
+        function simulate() {
+            if (!validateInputs()) return;
+
+            if (animationId) {
+                clearTimeout(animationId);
+            }
+
+            const queueInput = document.getElementById('requestQueue').value.trim();
+            const queue = queueInput.split(',').map(x => parseInt(x.trim()));
+            const head = parseInt(document.getElementById('initialHead').value);
+            const direction = document.getElementById('direction').value;
+            const algorithm = document.getElementById('algorithm').value;
+
+            // Calculate total cylinders based on max value in input
+            const allPositions = [...queue, head];
+            const totalCylinders = Math.max(...allPositions) + 50; // Add buffer for visualization
+
+            let result;
+
+            switch(algorithm) {
+                case 'fcfs':
+                    result = fcfs(queue, head);
+                    break;
+                case 'sstf':
+                    result = sstf(queue, head);
+                    break;
+                case 'scan':
+                    result = scan(queue, head, direction);
+                    break;
+                case 'cscan':
+                    result = cscan(queue, head, direction);
+                    break;
+                case 'look':
+                    result = look(queue, head, direction);
+                    break;
+                case 'clook':
+                    result = clook(queue, head, direction);
+                    break;
+            }
+
+            // Display results
+            document.getElementById('visualization').classList.add('active');
+            
+            const algoInfo = algorithmDescriptions[algorithm];
+            document.getElementById('algoInfo').innerHTML = `
+                <h3>${algoInfo.name}</h3>
+                <p>${algoInfo.description}</p>
+            `;
+
+            document.getElementById('totalSeek').textContent = result.totalSeek;
+            document.getElementById('avgSeek').textContent = (result.totalSeek / queue.length).toFixed(2);
+            document.getElementById('totalRequests').textContent = queue.length;
+
+            // Display sequence
+            const sequenceList = document.getElementById('sequenceList');
+            sequenceList.innerHTML = '';
+            result.sequence.forEach((val, idx) => {
+                const item = document.createElement('div');
+                item.className = 'sequence-item';
+                item.textContent = val;
+                if (idx === 0) {
+                    item.style.borderColor = '#28a745';
+                    item.style.color = '#28a745';
+                }
+                sequenceList.appendChild(item);
+            });
+
+            // Animate
+            animate(result.sequence, totalCylinders);
+            
+            // Scroll to visualization
+            document.getElementById('visualization').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function reset() {
+            if (animationId) {
+                clearTimeout(animationId);
+            }
+            document.getElementById('requestQueue').value = '';
+            document.getElementById('initialHead').value = '53';
+            document.getElementById('direction').value = 'right';
+            document.getElementById('algorithm').value = 'fcfs';
+            document.getElementById('visualization').classList.remove('active');
+            document.getElementById('error').style.display = 'none';
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
