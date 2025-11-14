@@ -261,14 +261,6 @@
                 </div>
 
                 <div class="input-group">
-                    <label>Initial Direction (for SCAN, C-SCAN, LOOK, C-LOOK)</label>
-                    <select id="direction">
-                        <option value="right">Moving Right (Towards Higher Cylinders)</option>
-                        <option value="left">Moving Left (Towards Lower Cylinders)</option>
-                    </select>
-                </div>
-
-                <div class="input-group">
                     <label>Disk Scheduling Algorithm</label>
                     <select id="algorithm">
                         <option value="fcfs">FCFS - First Come First Serve</option>
@@ -738,7 +730,7 @@
             const queueInput = document.getElementById('requestQueue').value.trim();
             const queue = queueInput.split(',').map(x => parseInt(x.trim()));
             const head = parseInt(document.getElementById('initialHead').value);
-            const direction = document.getElementById('direction').value;
+            const direction = 'right';
             const algorithm = document.getElementById('algorithm').value;
 
             // Calculate total cylinders based on max value in input
@@ -808,7 +800,6 @@
             }
             document.getElementById('requestQueue').value = '';
             document.getElementById('initialHead').value = '53';
-            document.getElementById('direction').value = 'right';
             document.getElementById('algorithm').value = 'fcfs';
             document.getElementById('visualization').classList.remove('active');
             document.getElementById('error').style.display = 'none';
@@ -817,4 +808,4 @@
         window.onload = init;
     </script>
 </body>
-</html>
+</html
